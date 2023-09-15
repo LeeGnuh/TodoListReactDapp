@@ -1,163 +1,178 @@
 import React from 'react';
-import Web3 from 'web3';
+import { ethers } from 'ethers';
 import { useState } from 'react';
-// import { contractABI, contractAddress } from './config.js';
-
-const contractAddress = '0x52653F634CE709885300f1dCf058a8c6B5cc6956';
-const contractABI = [
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "_task",
-        "type": "string"
-      }
-    ],
-    "name": "addTask",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_taskIndex",
-        "type": "uint256"
-      }
-    ],
-    "name": "deleteTask",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_taskIndex",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "_status",
-        "type": "bool"
-      }
-    ],
-    "name": "updateStatus",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_taskIndex",
-        "type": "uint256"
-      }
-    ],
-    "name": "getTask",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "string",
-            "name": "task",
-            "type": "string"
-          },
-          {
-            "internalType": "bool",
-            "name": "isDone",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct TodoApp.Task",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getTaskCount",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-];
+import { contractABI, contractAddress, mumbaibyChainId } from './config';
+// import Task from './Task';
 
 function App() {
 
-  const [web3, setWeb3] = useState(null);
+  // const [tasks, setTasks] = useState([]);
   const [account, setAccount] = useState(null);
   const [contract, setContract] = useState(null);
 
 
-  async function connectToMetaMask() {
+  var currentTasks = [];
 
-    const web3Ins = new Web3(window.ethereum);
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const contract = new web3Ins.eth.Contract(contractABI, contractAddress);
+  const connectToMetaMask = async () => {
 
-    setWeb3(web3Ins);
-    setAccount(accounts[0]);
-    setContract(contract);
-  }
+    try {
+      const { ethereum } = window;
 
-  async function addTask() {
-    const gas = await contract.methods.addTask(document.getElementById('taskName').value).estimateGas();
-    console.log('gas: ', gas)
+      if (!ethereum) { console.log('Metamask not detected'); return; }
 
-    await contract.methods.addTask(document.getElementById('taskName').value).send({
-      from: account, gas
-    });
-  }
+      let chainId = await ethereum.request({ method: 'eth_chainId' });
+      console.log('Connected to chain:' + chainId);
 
-  async function getTask(){
 
-    const task = await contract.methods.getTask(document.getElementById('taskName').value).call({
-      from: account
-    });
+      if (chainId !== mumbaibyChainId) { alert('You are not connected to the Mumbai Testnet!'); return; }
+      else { console.log('Metamask is connected'); }
 
-    console.log(task['task'], task['isDone']);
+      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      console.log('Found account', accounts[0]);
+      setAccount(accounts[0]);
 
-  }
 
-  async function getTaskCount() {
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
+        console.log('Contract is signed');
+        setContract(contract);
+      }
 
-    const num = await contract.methods.getTaskCount().call({
-      from: account
-    });
-
-    alert(num);
+    } catch (error) { console.log('Error connecting to metamask', error); }
 
   }
 
+  const addTask = async () => {
+
+    try {
+      const transition = await contract.addTask(document.getElementById('taskName').value)
+      await transition.wait()
+        .then(response => {
+          console.log("Adding task is completed, reloading current tasks...");
+        })
+        .catch(err => {
+          console.log("Error occured while adding a new task");
+        });
+
+      loadCurrentTasks();
+    } catch (error) { console.log("Error adding new task", error); }
+
+  }
+
+  const updateStatus = async () => {
+    try {
+      const transition = await contract.updateStatus(Number(document.getElementById('taskName').value), true)
+      await transition.wait()
+        .then(response => {
+          console.log("Updating task is Completed, reloading current tasks...");
+        })
+        .catch(err => {
+          console.log("Error occured while adding a new task");
+        });
+
+      loadCurrentTasks();
+    } catch (error) {
+      console.log("Error updating a task", error);
+    }
+  }
+
+  const deleteTask = async () => {
+    try {
+      const transition = await contract.deleteTask(Number(document.getElementById('taskName').value))
+      await transition.wait()
+        .then(response => {
+          console.log("Deleting task is Completed, reloading current tasks...");
+        })
+        .catch(err => {
+          console.log("Error occured while adding a new task");
+        });
+
+      loadCurrentTasks();
+    } catch (error) {
+      console.log("Error deleting a task", error);
+    }
+  }
+
+  const getTask = async (numOfTask) => {
+    try {
+      const { ethereum } = window
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
+        console.log('Contract is signed');
+        const task = await contract.getTask(numOfTask);
+        return task;
+      }
+      else { console.log('Error when getting the contract'); }
+
+    } catch (error) {
+      console.log("Error getting a task", error);
+    }
+  }
+
+  const getTaskCount = async () => {
+    try {
+      const { ethereum } = window
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(contractAddress, contractABI, signer);
+        console.log('Contract is signed');
+        let num = await contract.getTaskCount();
+        return Number(num);
+      }
+      else { console.log('Error when getting the contract'); }
+
+    } catch (error) {
+      console.log("Error getting a task", error);
+    }
+  }
+
+  const loadCurrentTasks = async () => {
+
+    currentTasks = [];
+    let n = await getTaskCount();
+
+    for (let i = 0; i < n; i++) {
+      let aTask = await getTask(i);
+      currentTasks.push(aTask);
+    }
+
+    console.log(currentTasks);
+
+  }
 
   return (
     <div className="App">
-      <h1>Todo-list App</h1>   
+      <h1>Todo-list App</h1>
       <div>{account ? (
         <div>
           <p>Connected to MetaMask</p>
           <p>Account: {account}</p>
         </div>
       ) : (
-          <button onClick={connectToMetaMask}>Connect to MetaMask</button>
-      )}</div>
+        <button onClick={connectToMetaMask}>Connect to MetaMask</button>
+      )}
+      </div>
       <input type='text' id='taskName'></input>
       <button onClick={addTask}>Add Task</button>
+      <button onClick={updateStatus}>Completed Task</button>
       <button onClick={getTaskCount}>Get Task Count</button>
-      <button onClick={getTask}>Get Task</button>
+      <button onClick={loadCurrentTasks}>Get Task</button>
+      <button onClick={deleteTask}>Delete Task</button>
+
+      {/* <ul>
+        {tasks.map(item =>
+          <Task
+            key={item.id}
+            taskText={item.taskText}
+            onClick={deleteTask(item.id)}
+          />)
+        }
+      </ul> */}
     </div>
   );
 }
