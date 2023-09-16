@@ -168,43 +168,7 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Todo-list App</h1>
-      <div>{account ? (
-        <div>
-          <p>Connected to MetaMask</p>
-          <p>Account: {account}</p>
-          <div><Button onClick={disConnectToMetaMark}>Disconnect to MetaMask</Button></div>
-          <br></br>
-        </div>
-      ) : (
-        <div>
-          <Button variant="contained" color="primary" onClick={connectToMetaMask}>Connect to MetaMask</Button>
-          <br></br>
-          <br></br>
-        </div>
-      )}
-      </div>
-      <div>
-        <TextField type='text' id='taskName'></TextField>
-        <Button variant="contained" color="primary" onClick={addTask} >Add Task</Button>
-      </div>
-      <br></br>
-      <h1>Task List</h1>
-      <List style={{ width : 500 }}>
-        {tasks.map((item, index) => {
-          if (item.task.trim() !== '') {
-            return <ListItem key={index}>
-              <ListItemAvatar />
-              <ListItemText type='text' primary={item.task} />
-              {item.isDone ? (<Checkbox checked id={index} onChange={updateTaskUI}></Checkbox>)
-                : (<Checkbox id={index} onChange={updateTaskUI}></Checkbox>)}
-              <Button style={{ color: 'red' }} id={index} onClick={deleteTaskUI}> X </Button >
-            </ListItem>
-          }
-          else return null;
-        }
-        )}
-      </List>
+      
     </div>
   );
 }
