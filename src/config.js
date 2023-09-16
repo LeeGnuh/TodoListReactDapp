@@ -1,5 +1,5 @@
 export const mumbaibyChainId = '0x13881';
-export const contractAddress = '0x52653F634CE709885300f1dCf058a8c6B5cc6956';
+export const contractAddress = '0xA24bBeE9AdD67b9bac2aEF579cEC53687B9B122C';
 export const contractABI = [
     {
         "inputs": [

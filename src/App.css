@@ -36,3 +36,18 @@
     transform: rotate(360deg);
   }
 }
+
+/* Định dạng nền và màu chữ cho nút */
+.Button {
+  background-color: #ff0000; /* Màu đỏ */
+  color: #ffffff; /* Màu trắng cho chữ */
+  border: none; /* Loại bỏ viền */
+  padding: 10px 20px; /* Kích thước và khoảng cách nút */
+  border-radius: 5px; /* Đường viền cong */
+  cursor: pointer; /* Thay đổi con trỏ khi di chuột qua nút */
+}
+
+/* Định dạng nút khi di chuột qua */
+.Button:hover {
+  background-color: #cc0000; /* Màu đỏ nhạt khi di chuột qua */
+}

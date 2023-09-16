@@ -1,15 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ethers } from 'ethers';
-import { useState } from 'react';
 import { contractABI, contractAddress, mumbaibyChainId } from './config';
-// import Task from './Task';
+import { TextField, Button, List, Checkbox, ListItem, ListItemAvatar, ListItemText } from '@mui/material';
 
 function App() {
 
-  // const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [account, setAccount] = useState(null);
   const [contract, setContract] = useState(null);
-
+  const [provider, getProvider] = useState(null);
 
   var currentTasks = [];
 
@@ -34,16 +33,24 @@ function App() {
 
       if (ethereum) {
         const provider = new ethers.providers.Web3Provider(ethereum);
+        getProvider(provider);
         const signer = provider.getSigner();
         const contract = new ethers.Contract(contractAddress, contractABI, signer);
         console.log('Contract is signed');
         setContract(contract);
+
+        loadCurrentTasks();
       }
 
     } catch (error) { console.log('Error connecting to metamask', error); }
 
   }
 
+  const disConnectToMetaMark = async () => {
+    setAccount(null);
+    setContract(null);
+    setTasks([]);
+  }
   const addTask = async () => {
 
     try {
@@ -60,10 +67,15 @@ function App() {
     } catch (error) { console.log("Error adding new task", error); }
 
   }
-
-  const updateStatus = async () => {
+  const updateTaskUI = (e) => {
+    const checkboxId = e.target.id;
+    const statesOfBox = e.target.checked;
+    console.log({ checkboxId, statesOfBox });
+    updateStatus(checkboxId, statesOfBox);
+  }
+  const updateStatus = async (numOfTask, statusTask) => {
     try {
-      const transition = await contract.updateStatus(Number(document.getElementById('taskName').value), true)
+      const transition = await contract.updateStatus(numOfTask, statusTask);
       await transition.wait()
         .then(response => {
           console.log("Updating task is Completed, reloading current tasks...");
@@ -78,9 +90,14 @@ function App() {
     }
   }
 
-  const deleteTask = async () => {
+  const deleteTaskUI = (e) => {
+    const buttonId = e.target.id;
+    console.log(buttonId);
+    deleteTask(buttonId);
+  }
+  const deleteTask = async (numOfTask) => {
     try {
-      const transition = await contract.deleteTask(Number(document.getElementById('taskName').value))
+      const transition = await contract.deleteTask(Number(numOfTask))
       await transition.wait()
         .then(response => {
           console.log("Deleting task is Completed, reloading current tasks...");
@@ -131,6 +148,10 @@ function App() {
     }
   }
 
+  // const reloadTasks = () => {
+  //   console.log(tasks);
+  //   tasks.map((item, index) => { console.log(item.isDone); return item; })
+  // }
   const loadCurrentTasks = async () => {
 
     currentTasks = [];
@@ -141,8 +162,8 @@ function App() {
       currentTasks.push(aTask);
     }
 
-    console.log(currentTasks);
-
+    // console.log(currentTasks);
+    setTasks(currentTasks);
   }
 
   return (
@@ -152,27 +173,38 @@ function App() {
         <div>
           <p>Connected to MetaMask</p>
           <p>Account: {account}</p>
+          <div><Button onClick={disConnectToMetaMark}>Disconnect to MetaMask</Button></div>
+          <br></br>
         </div>
       ) : (
-        <button onClick={connectToMetaMask}>Connect to MetaMask</button>
+        <div>
+          <Button variant="contained" color="primary" onClick={connectToMetaMask}>Connect to MetaMask</Button>
+          <br></br>
+          <br></br>
+        </div>
       )}
       </div>
-      <input type='text' id='taskName'></input>
-      <button onClick={addTask}>Add Task</button>
-      <button onClick={updateStatus}>Completed Task</button>
-      <button onClick={getTaskCount}>Get Task Count</button>
-      <button onClick={loadCurrentTasks}>Get Task</button>
-      <button onClick={deleteTask}>Delete Task</button>
-
-      {/* <ul>
-        {tasks.map(item =>
-          <Task
-            key={item.id}
-            taskText={item.taskText}
-            onClick={deleteTask(item.id)}
-          />)
+      <div>
+        <TextField type='text' id='taskName'></TextField>
+        <Button variant="contained" color="primary" onClick={addTask} >Add Task</Button>
+      </div>
+      <br></br>
+      <h1>Task List</h1>
+      <List style={{ width : 500 }}>
+        {tasks.map((item, index) => {
+          if (item.task.trim() !== '') {
+            return <ListItem key={index}>
+              <ListItemAvatar />
+              <ListItemText type='text' primary={item.task} />
+              {item.isDone ? (<Checkbox checked id={index} onChange={updateTaskUI}></Checkbox>)
+                : (<Checkbox id={index} onChange={updateTaskUI}></Checkbox>)}
+              <Button style={{ color: 'red' }} id={index} onClick={deleteTaskUI}> X </Button >
+            </ListItem>
+          }
+          else return null;
         }
-      </ul> */}
+        )}
+      </List>
     </div>
   );
 }
